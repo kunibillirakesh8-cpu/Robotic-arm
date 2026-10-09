@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Arm Position Calculator</title>
+<style>
+:root{--bg:#070d17;--panel:rgba(18,30,48,.72);--line:rgba(80,200,255,.28);--cy:#38d0ff;--tx:#e8f1fa;--mu:#8ba3bb;--ok:#3ddc97;--bad:#ff5d6c}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 20% 0,#0f2238,#070d17 60%);color:var(--tx);font:14px/1.5 "Segoe UI",system-ui,sans-serif;min-height:100vh}
+body.light{--bg:#eef3f8;--panel:rgba(255,255,255,.85);--line:rgba(10,100,160,.3);--tx:#14212e;--mu:#52667a;--cy:#0a7fb5}
+body.light{background:#eef3f8}
+button,input,select{font:inherit;color:inherit}
+button{background:rgba(56,208,255,.12);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{background:rgba(56,208,255,.28)}button.pri{background:var(--cy);color:#04121c;font-weight:600}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cy)}
+input[type=text],input[type=email],input[type=password],input[type=number],select{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;backdrop-filter:blur(8px);box-shadow:0 0 18px rgba(56,208,255,.06)}
+h1,h2,h3{margin:0 0 8px}h3{font-size:15px;color:var(--cy)}
+.mu{color:var(--mu)}.hide{display:none!important}
+#login{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+#login .card{max-width:860px;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+#login label{display:block;margin:10px 0 3px}
+.badge{display:inline-block;border:1px solid var(--cy);color:var(--cy);border-radius:99px;padding:2px 10px;font-size:12px}
+#app{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+nav{padding:16px 10px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+nav button{text-align:left;border-color:transparent;background:none}nav button.on{background:rgba(56,208,255,.18);border-color:var(--line)}
+main{padding:14px;min-width:0}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.grid{display:grid;gap:12px}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1.4fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+.metric b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+canvas{width:100%;display:block;border-radius:10px;background:rgba(0,0,0,.28);touch-action:none}
+.row{display:grid;grid-template-columns:100px 1fr 74px;gap:8px;align-items:center;margin:6px 0}
+input[type=range]{width:100%;accent-color:var(--cy)}
+table{width:100%;border-collapse:collapse}td,th{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}
+.mat{display:inline-grid;grid-template-columns:repeat(4,auto);gap:2px 14px;font-family:Consolas,monospace;border-left:2px solid var(--cy);border-right:2px solid var(--cy);padding:4px 10px;margin:4px 8px 4px 0;font-size:13px}
+.mat span.p{color:var(--ok)}.mat span.r{color:var(--cy)}
+.eq{font-family:"Cambria Math",Cambria,serif;font-size:15px;background:rgba(0,0,0,.2);padding:6px 10px;border-radius:8px;margin:5px 0;overflow-x:auto}
+.warn{color:var(--bad)}.ok{color:var(--ok)}
+.why{display:none;background:rgba(56,208,255,.08);border-radius:8px;padding:6px 10px;margin:4px 0}.student .why.open{display:block}
+.whyb{display:none;font-size:12px}.student .whyb{display:inline-block}
+.eng{display:none}.engm .eng{display:block}
+.sec{display:none}.sec.on{display:block}
+.step{border-left:3px solid var(--cy);padding:4px 10px;margin:8px 0}
+#present{position:fixed;inset:0;background:var(--bg);z-index:9;padding:30px;overflow:auto}
+#present .flow{display:flex;flex-direction:column;gap:10px;max-width:720px;margin:auto;text-align:center}
+#present .flow div{border:1px solid var(--line);border-radius:12px;padding:12px}
+#present .flow i{color:var(--cy);font-style:normal}
+@media(max-width:900px){#app{grid-template-columns:1fr}nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}
+.g4,.g2,.g3,#login .card{grid-template-columns:1fr 1fr}.g2,.g3,#login .card{grid-template-columns:1fr}.row{grid-template-columns:80px 1fr 64px}}
+@media print{nav,.tools,#login,.noprint{display:none!important}#app{display:block}.sec{display:block!important}body{background:#fff;color:#000}.card{border:1px solid #999;background:#fff}canvas{background:#eee}}
+</style>
+</head>
+<body>
+
+<section id="login">
+ <div class="card">
+  <div>
+   <canvas id="loginCv" width="400" height="300" style="height:260px"></canvas>
+   <p class="mu" style="margin:10px 0 0">Engineering Robotics Simulator</p>
+  </div>
+  <div>
+   <span class="badge">B.Tech Engineering Mathematics Project</span>
+   <h1 style="margin-top:10px">🤖 Robot Arm Position Calculator</h1>
+   <p class="mu">Visualizing Robotics Through Mathematics</p>
+   <label for="em">Email</label><input id="em" type="email" value="student@robotics.com" autocomplete="username">
+   <label for="pw">Password</label><input id="pw" type="password" value="robot123" autocomplete="current-password">
+   <label><input type="checkbox" id="rem" checked> Remember me</label>
+   <p id="lerr" class="warn"></p>
+   <button class="pri" id="loginBtn">Login</button> <button id="demoBtn">Demo Login</button>
+  </div>
+ </div>
+</section>
+
+<div id="app" class="hide">
+ <nav aria-label="Main">
+  <b style="padding:6px 12px;color:var(--cy)">🤖 RAPC</b>
+  <button data-s="dash" class="on" title="Overview of the robot and its current position">Dashboard</button>
+  <button data-s="fk" title="Calculate end-effector position from known joint angles.">Forward Kinematics</button>
+  <button data-s="ik" title="Calculate joint angles required to reach a target position.">Inverse Kinematics</button>
+  <button data-s="sim" title="Interactive 3D view. Drag to rotate, wheel to zoom.">3D Simulator</button>
+  <button data-s="mat" title="Step through matrix multiplication">Matrix Lab</button>
+  <button data-s="calc" title="Step-by-step working">Calculations</button>
+  <button data-s="hist" title="Saved calculations and export">History &amp; Export</button>
+  <button data-s="about" title="About the project">About Project</button>
+ </nav>
+ <main>
+  <header>
+   <div><h2 style="margin:0">🤖 ROBOT ARM POSITION CALCULATOR</h2><span class="mu">Visualizing Robotics Through Mathematics</span></div>
+   <div class="tools">
+    <label title="Explain every calculation in simple language"><input type="checkbox" id="stu"> 🎓 Student</label>
+    <label title="Show raw matrices and precision"><input type="checkbox" id="eng"> ⚙ Engineering</label>
+    <select id="prec" style="width:auto" title="Decimal places"><option value="2">2 decimals</option><option value="4">4 decimals</option><option value="6">6 decimals</option></select>
+    <button id="presBtn">🎤 Presentation</button><button id="themeBtn">🌓</button><button id="resetBtn" title="Restore defaults">Reset</button><span title="Settings and profile">👤 student</span><button id="outBtn">Logout</button>
+   </div>
+  </header>
+
+  <div class="grid g4" id="metrics" style="margin-bottom:12px"></div>
+
+  <div class="grid g2">
+   <div>
+    <div class="card sec on" data-p="dash fk ik mat calc sim hist about" id="visCard" style="display:block">
+     <h3>Robot Visualization <span id="status"></span></h3>
+     <div id="view2d"><canvas id="cv2" width="700" height="520"></canvas>
+      <p class="mu" style="margin:6px 0 0">Click the plane to set a target. Green ring = reachable workspace.</p></div>
+     <div id="view3d" class="hide"><canvas id="cv3" width="700" height="520"></canvas>
+      <div class="tools" style="margin-top:8px"><button id="bStart">▶ Start</button><button id="bPause">⏸ Pause</button><button id="bReset3">🔄 Reset</button><button id="bGo">🎯 Move to Target</button>
+      <label>Speed <input type="range" id="spd" min=".25" max="2" step=".25" value="1" style="width:110px"> <span id="spdv">1x</span></label></div></div>
+    </div>
+   </div>
+   <div class="card">
+    <h3>Parameters</h3><div id="params"></div><p id="errs" class="warn"></p>
+    <div class="tools"><button class="pri" id="saveBtn">Save to history</button></div>
+    <p id="done" class="ok" style="margin:6px 0 0"></p>
+   </div>
+  </div>
+
+  <div class="sec on" data-p="dash" id="s-dash"><div class="grid g2" style="margin-top:12px">
+   <div class="card"><h3>Joint Positions</h3><div id="jt"></div></div>
+   <div class="card"><h3>Project Summary</h3>
+    <p><b>Input:</b> Link lengths and joint angles<br><b>Method:</b> Forward Kinematics<br><b>Mathematics:</b> Trigonometry + Matrix Multiplication<br><b>Output:</b> End-effector position<br><b>Application:</b> Robotic automation</p>
+    <div id="angs"></div></div></div></div>
+
+  <div class="sec" id="s-fk"><div class="card" style="margin-top:12px"><h3>Forward Kinematics</h3>
+   <p>Forward Kinematics calculates the position of the robot's end effector from known joint angles and link lengths.</p>
+   <div class="eq">x = L₁cos θ₁ + L₂cos(θ₁+θ₂) + L₃cos(θ₁+θ₂+θ₃)</div><div class="eq">y = L₁sin θ₁ + L₂sin(θ₁+θ₂) + L₃sin(θ₁+θ₂+θ₃)</div>
+   <p>Each joint frame uses the homogeneous transformation (rotation about Z, then a move of one link length along the new X axis):</p>
+   <div class="eq">Tᵢ = [ cosθ −sinθ 0 L·cosθ ; sinθ cosθ 0 L·sinθ ; 0 0 1 0 ; 0 0 0 1 ]</div>
+   <div class="why open"><b>Why this formula?</b> Each link points at the sum of all earlier joint angles, so we add each link's x and y part.</div>
+   <h3 style="margin-top:12px">Transformation matrices</h3><div id="fkm"></div><p>Final matrix T₀₃ = T₀₁ × T₁₂ × T₂₃. The last column is the end-effector position.</p><div id="fkres"></div></div></div>
+
+  <div class="sec" id="s-ik"><div class="card" style="margin-top:12px"><h3>Inverse Kinematics</h3>
+   <p>Enter a target. For the 3-link arm the end-effector tilt φ = θ₁+θ₂+θ₃ is kept as an assumption (default: current tilt), so the wrist point is solved as a 2-link arm.</p>
+   <div class="grid g3"><div>Target X (mm)<input type="number" id="tx" value="250"></div><div>Target Y (mm)<input type="number" id="ty" value="150"></div><div>Target Z (mm)<input type="number" id="tz" value="100"></div></div>
+   <div style="margin:8px 0"><label>Tilt φ (°) <input type="number" id="tphi" style="width:90px" value="95"></label> <button class="pri" id="ikBtn">Solve &amp; Move</button> <button id="clrT">Clear target</button></div>
+   <p class="mu">Z is shown for completeness: this planar arm moves in the X–Y plane, so Z is held at 0 and the entered Z is reported but not reachable unless 0.</p>
+   <div id="ikres"></div></div></div>
+
+  <div class="sec" id="s-sim"><div class="card" style="margin-top:12px"><h3>3D Simulator</h3><p class="mu">Drag the 3D view to rotate, scroll to zoom, shift-drag to pan. Use the controls beneath it.</p></div></div>
+
+  <div class="sec" id="s-mat"><div class="card" style="margin-top:12px"><h3>Matrix Lab</h3>
+   <p>Matrix multiplication: each entry of the result is the dot product of a row of the left matrix and a column of the right one. Chaining joints = multiplying their matrices.</p>
+   <button id="mstep" class="pri">Next step ▶</button> <button id="mrst">Restart</button><div id="mlab" style="margin-top:8px"></div></div></div>
+
+  <div class="sec" id="s-calc"><div class="card" style="margin-top:12px"><h3>Step-by-Step Calculation</h3><div id="steps"></div></div></div>
+
+  <div class="sec" id="s-hist"><div class="card" style="margin-top:12px"><h3>Calculation History</h3><div id="hist"></div>
+   <div class="tools noprint" style="margin-top:8px"><button id="csvBtn">Download CSV</button><button id="pdfBtn">Download PDF (print)</button><button id="prBtn">Print Report</button><button id="clrH">Clear History</button></div></div></div>
+
+  <div class="sec" id="s-about"><div class="card" style="margin-top:12px"><h3>About Project</h3>
+   <p>This project demonstrates how trigonometry, matrices, coordinate geometry and transformation matrices determine the position of a robotic arm.</p>
+   <p><b>Problem:</b> Given link lengths and joint angles, determine the position and orientation of the end effector.</p>
+   <p><b>Concepts:</b> Trigonometry, Coordinate Geometry, Matrices, Matrix Multiplication, Homogeneous Transformation, Forward &amp; Inverse Kinematics.</p>
+   <p><b>Applications:</b> Industrial robots, manufacturing, pick-and-place, automation, CNC machines, robotic surgery, space robotics.</p></div></div>
+
+  <div class="card" style="margin-top:12px" id="wsCard"><h3>Workspace</h3><div id="ws"></div></div>
+ </main>
+</div>
+
+<div id="present" class="hide"><div class="flow">
+ <h1>🤖 Robot Arm Position Calculator</h1>
+ <div><b>Problem</b><br>How can mathematics determine where a robot arm's end effector will be?</div><i>↓</i>
+ <div><b>Input</b><br>Link lengths + joint angles</div><i>↓</i>
+ <div><b>Mathematics</b><br>Trigonometry + Matrices</div><i>↓</i>
+ <div><b>Calculation</b><br>Forward / Inverse Kinematics</div><i>↓</i>
+ <div><b>Output</b><br><span id="pOut"></span></div><i>↓</i>
+ <div><b>Real-world applications</b><br>Robotics + Automation + Manufacturing</div>
+ <div class="tools" style="justify-content:center"><button id="fsBtn">Full screen</button><button id="pClose" class="pri">Close</button></div>
+</div></div>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const DEF={L:[150,120,100],A:[30,45,20]},LIM=[[-180,180],[-150,150],[-150,150]];
+let S={L:[...DEF.L],A:[...DEF.A]},target=null,prec=2,mstep=0,anim=null,playing=true,cam={yaw:.7,pit:.45,z:1,px:0,py:0};
+const rad=d=>d*Math.PI/180,deg=r=>r*180/Math.PI,f=(v,p=prec)=>(Math.abs(v)<5e-10?0:v).toFixed(p);
+
+/* ---------- math (separate from UI) ---------- */
+function mul(a,b){const r=[];for(let i=0;i<4;i++){r[i]=[];for(let j=0;j<4;j++){let s=0;for(let k=0;k<4;k++)s+=a[i][k]*b[k][j];r[i][j]=s}}return r}
+function T(th,L){const c=Math.cos(rad(th)),s=Math.sin(rad(th));return[[c,-s,0,L*c],[s,c,0,L*s],[0,0,1,0],[0,0,0,1]]}
+function fk(L,A){const T1=T(A[0],L[0]),T2=T(A[1],L[1]),T3=T(A[2],L[2]),T02=mul(T1,T2),T03=mul(T02,T3);
+ const P=[[0,0],[T1[0][3],T1[1][3]],[T02[0][3],T02[1][3]],[T03[0][3],T03[1][3]]];return{T1,T2,T3,T02,T03,P}}
+function ik(L,x,y,phi){ // returns {ok,A,why}
+ const wx=x-L[2]*Math.cos(rad(phi)),wy=y-L[2]*Math.sin(rad(phi)),d2=wx*wx+wy*wy,a=L[0],b=L[1];
+ let c=(d2-a*a-b*b)/(2*a*b);
+ if(c>1+1e-9||c<-1-1e-9)return{ok:false,why:`cos θ₂ = ${f(c,3)} lies outside [−1, 1]: the wrist point is ${Math.sqrt(d2)>a+b?'beyond the maximum reach':'inside the minimum reach'} of the first two links.`};
+ c=Math.max(-1,Math.min(1,c));const t2=Math.acos(c),t1=Math.atan2(wy,wx)-Math.atan2(b*Math.sin(t2),a+b*Math.cos(t2));
+ return{ok:true,A:[deg(t1),deg(t2),phi-deg(t1)-deg(t2)],c,wx,wy}}
+const reach=L=>({max:L[0]+L[1]+L[2],min:Math.max(0,Math.abs(L[0])-L[1]-L[2],Math.abs(L[0]-L[1])-L[2],Math.abs(L[1]-L[2])-L[0],Math.abs(L[0]-L[2])-L[1])});
+function validate(){const e=[];S.L.forEach((v,i)=>{if(!(v>0))e.push(`⚠ Link ${i+1} length must be greater than 0.`)});
+ S.A.forEach((v,i)=>{if(isNaN(v)||v<LIM[i][0]||v>LIM[i][1])e.push(`⚠ Joint ${i+1} angle must be within ${LIM[i][0]}° to ${LIM[i][1]}°.`)});return e}
+
+/* ---------- UI build ---------- */
+function buildParams(){let h='';const n=['Link 1 (mm)','Link 2 (mm)','Link 3 (mm)'];
+ S.L.forEach((v,i)=>h+=`<div class="row"><label>${n[i]}</label><input type="range" id="lr${i}" min="10" max="300" value="${v}"><input type="number" id="ln${i}" value="${v}" step="1"></div>`);
+ S.A.forEach((v,i)=>h+=`<div class="row"><label>Joint ${i+1} (°)</label><input type="range" id="ar${i}" min="${LIM[i][0]}" max="${LIM[i][1]}" value="${v}"><input type="number" id="an${i}" value="${v}" step="1"></div>`);
+ $('#params').innerHTML=h;
+ [0,1,2].forEach(i=>{['lr','ln'].forEach(p=>$('#'+p+i).oninput=e=>{S.L[i]=parseFloat(e.target.value);sync();update()});
+  ['ar','an'].forEach(p=>$('#'+p+i).oninput=e=>{S.A[i]=parseFloat(e.target.value);sync();update()})})}
+function sync(){[0,1,2].forEach(i=>{if(document.activeElement.id!=='ln'+i&&!isNaN(S.L[i]))$('#ln'+i).value=S.L[i];if(!isNaN(S.L[i]))$('#lr'+i).value=S.L[i];
+ if(document.activeElement.id!=='an'+i&&!isNaN(S.A[i]))$('#an'+i).value=+S.A[i].toFixed(2);if(!isNaN(S.A[i]))$('#ar'+i).value=S.A[i]})}
+const matH=(M,hl=1)=>`<div class="mat">${M.map((r,i)=>r.map((v,j)=>`<span class="${j==3&&i<3&&hl?'p':i<3&&j<3&&hl?'r':''}">${f(v)}</span>`).join('')).join('')}</div>`;
+
+function update(){
+ const errs=validate();$('#errs').innerHTML=errs.join('<br>');
+ if(errs.length){$('#done').textContent='';return}
+ const R=fk(S.L,S.A),e=R.P[3],r=Math.hypot(e[0],e[1]),W=reach(S.L);
+ $('#done').textContent='✓ Calculation Complete';
+ $('#metrics').innerHTML=[['End Effector X',e[0]],['End Effector Y',e[1]],['End Effector Z',0],['Reach (|r|)',r]].map(m=>`<div class="card metric"><span class="mu">${m[0]}</span><b>${f(m[1],1)} mm</b></div>`).join('');
+ $('#jt').innerHTML=`<table><tr><th>Joint</th><th>X</th><th>Y</th><th>Z</th></tr>${['Base','J1','J2','End Effector'].map((n,i)=>`<tr><td>${n}</td><td>${f(R.P[i][0])}</td><td>${f(R.P[i][1])}</td><td>${f(0)}</td></tr>`).join('')}</table>`;
+ $('#angs').innerHTML=S.A.map((a,i)=>`<p style="margin:4px 0">θ${i+1} = <b>${f(a)}°</b> <span class="mu">(${f(rad(a),4)} rad)</span> ${i==0?'<span class="why open">θ₁ is the rotation of the first joint from the X axis.</span>':''}</p>`).join('');
+ $('#fkm').innerHTML=['T₀₁','T₁₂','T₂₃'].map((n,i)=>`${n} =${matH(R['T'+(i+1)])}`).join('<br>')+`<br>T₀₂ = T₀₁×T₁₂ =${matH(R.T02)}<br>T₀₃ =${matH(R.T03)}`;
+ $('#fkres').innerHTML=`<p>Position vector p = (<b>${f(e[0])}, ${f(e[1])}, 0</b>) mm · Tilt φ = ${f(S.A[0]+S.A[1]+S.A[2])}°</p><p class="eng">Rotation matrix R = upper-left 3×3 (blue); position = last column (green). Precision: ${prec} decimals.</p>`;
+ $('#ws').innerHTML=`<div class="eq">R_max = L₁+L₂+L₃ = ${f(W.max)} mm &nbsp; R_min = ${f(W.min)} mm</div><p>Current distance from base: ${f(r)} mm — ${r<=W.max+1e-9&&r>=W.min-1e-9?'<span class="ok">inside workspace</span>':'<span class="warn">outside workspace</span>'}</p>
+ <p class="eng">Joint limits: θ₁ ∈ [${LIM[0]}]°, θ₂ ∈ [${LIM[1]}]°, θ₃ ∈ [${LIM[2]}]°. Frames: each Tᵢ is attached to joint i with its X axis along link i.</p>`;
+ $('#pOut').textContent=`End effector at (${f(e[0],1)}, ${f(e[1],1)}) mm`;
+ steps(R);lab(R);hist();status();draw2();draw3()}
+
+function steps(R){const[L,A]=[S.L,S.A],c=[A[0],A[0]+A[1],A[0]+A[1]+A[2]];
+ const xs=c.map((t,i)=>L[i]*Math.cos(rad(t))),ys=c.map((t,i)=>L[i]*Math.sin(rad(t)));
+ const W=(t)=>`<span class="why open">${t}</span>`;
+ $('#steps').innerHTML=[
+ ['Convert degrees to radians',`θ₁ = ${f(A[0])}° × π/180 = ${f(rad(A[0]),4)} rad, θ₂ = ${f(rad(A[1]),4)} rad, θ₃ = ${f(rad(A[2]),4)} rad`,'Trig functions in code work in radians.'],
+ ['Cumulative angles',`θ₁ = ${f(c[0])}°, θ₁+θ₂ = ${f(c[1])}°, θ₁+θ₂+θ₃ = ${f(c[2])}°`,'Each link points at the sum of all joint angles before it.'],
+ ['X contributions',c.map((t,i)=>`L${i+1}cos(${f(t)}°) = ${f(L[i])}×${f(Math.cos(rad(t)),4)} = ${f(xs[i])}`).join('<br>'),'cos gives the horizontal share of each link.'],
+ ['Y contributions',c.map((t,i)=>`L${i+1}sin(${f(t)}°) = ${f(L[i])}×${f(Math.sin(rad(t)),4)} = ${f(ys[i])}`).join('<br>'),'sin gives the vertical share of each link.'],
+ ['Add contributions',`x = ${xs.map(v=>f(v)).join(' + ')} <br>y = ${ys.map(v=>f(v)).join(' + ')}`,'Adding the pieces places the tip.'],
+ ['Final end-effector position',`(x, y) = <b>(${f(xs[0]+xs[1]+xs[2])}, ${f(ys[0]+ys[1]+ys[2])})</b> mm — matches T₀₃ last column (${f(R.T03[0][3])}, ${f(R.T03[1][3])})`,'Two methods agree, confirming correctness.']
+ ].map((s,i)=>`<div class="step"><b>Step ${i+1}: ${s[0]}</b><div class="eq">${s[1]}</div>${W('Why? '+s[2])}</div>`).join('')}
+
+function lab(R){const seq=[['T₀₁ × T₁₂ = T₀₂',R.T02,'Row 1 of T₀₁ · column 4 of T₁₂ gives x₂.'],['T₀₂ × T₂₃ = T₀₃ (final)',R.T03,'Same rule again; last column = end-effector position.']];
+ let h=`<p>Start: T₀₁ =${matH(R.T1)}T₁₂ =${matH(R.T2)}T₂₃ =${matH(R.T3)}</p>`;
+ for(let i=0;i<Math.min(mstep,2);i++)h+=`<div class="step"><b>${seq[i][0]}</b>${matH(seq[i][1])}<div class="why open">${seq[i][2]}</div></div>`;
+ if(mstep==0)h+='<p class="mu">Press “Next step” to multiply.</p>';$('#mlab').innerHTML=h}
+
+function status(){const el=$('#status');if(!target){el.textContent='';return}
+ const r=Math.hypot(target[0],target[1]),W=reach(S.L);const ok=r<=W.max&&r>=W.min;
+ el.innerHTML=ok?'<span class="ok">🟢 Target Reachable</span>':'<span class="warn">🔴 Target Unreachable</span>'}
+
+function hist(){const H=JSON.parse(localStorage.getItem('rapc_h')||'[]');
+ $('#hist').innerHTML=H.length?`<table><tr><th>#</th><th>Links</th><th>Angles</th><th>End effector</th><th></th></tr>${H.map((h,i)=>`<tr><td>${String(i+1).padStart(2,'0')}</td><td>${h.L.join('/')}</td><td>${h.A.join('/')}°</td><td>${h.e.join(', ')}</td><td><button data-v="${i}">View</button> <button data-d="${i}">Delete</button></td></tr>`).join('')}</table>`:'<p class="mu">No saved calculations yet. Use “Save to history”.</p>';
+ $$('[data-v]').forEach(b=>b.onclick=()=>{const h=H[+b.dataset.v];S.L=[...h.L];S.A=[...h.A];buildParams();update()});
+ $$('[data-d]').forEach(b=>b.onclick=()=>{H.splice(+b.dataset.d,1);localStorage.setItem('rapc_h',JSON.stringify(H));hist()})}
+
+/* ---------- 2D drawing ---------- */
+function fit2(){const cv=$('#cv2'),W=reach(S.L).max,sc=(Math.min(cv.width,cv.height)/2-30)/Math.max(W,50);return{cv,sc,ox:cv.width/2,oy:cv.height/2+20,W}}
+function draw2(){if(validate().length)return;const{cv,sc,ox,oy}=fit2(),g=cv.getContext('2d'),R=fk(S.L,S.A),Wr=reach(S.L);
+ g.clearRect(0,0,cv.width,cv.height);const X=x=>ox+x*sc,Y=y=>oy-y*sc;
+ g.strokeStyle='rgba(56,208,255,.12)';g.lineWidth=1;const step=50;g.fillStyle='#8ba3bb';g.font='11px sans-serif';
+ for(let v=-600;v<=600;v+=step){g.beginPath();g.moveTo(X(v),0);g.lineTo(X(v),cv.height);g.moveTo(0,Y(v));g.lineTo(cv.width,Y(v));g.stroke();if(v&&Math.abs(X(v)-ox)<cv.width/2-14)g.fillText(v,X(v)+2,oy+12)}
+ g.strokeStyle='rgba(56,208,255,.6)';g.beginPath();g.moveTo(0,oy);g.lineTo(cv.width,oy);g.moveTo(ox,0);g.lineTo(ox,cv.height);g.stroke();g.fillText('X',cv.width-14,oy-5);g.fillText('Y',ox+5,12);
+ g.beginPath();g.arc(ox,oy,Wr.max*sc,0,7);if(Wr.min>0)g.arc(ox,oy,Wr.min*sc,0,7,true);g.fillStyle='rgba(61,220,151,.1)';g.fill('evenodd');g.strokeStyle='rgba(61,220,151,.6)';g.setLineDash([6,4]);g.stroke();g.setLineDash([]);
+ if(target){g.strokeStyle='#ffb347';g.lineWidth=2;const tx=X(target[0]),ty=Y(target[1]);g.beginPath();g.arc(tx,ty,9,0,7);g.moveTo(tx-14,ty);g.lineTo(tx+14,ty);g.moveTo(tx,ty-14);g.lineTo(tx,ty+14);g.stroke();g.fillStyle='#ffb347';g.fillText(`T (${f(target[0],0)}, ${f(target[1],0)})`,tx+12,ty-10)}
+ const cols=['#7aa7c7','#5b8db0','#3f7396'];g.lineCap='round';
+ for(let i=0;i<3;i++){g.strokeStyle=cols[i];g.lineWidth=12;g.beginPath();g.moveTo(X(R.P[i][0]),Y(R.P[i][1]));g.lineTo(X(R.P[i+1][0]),Y(R.P[i+1][1]));g.stroke();g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=2;g.stroke()}
+ g.fillStyle='#223';g.fillRect(ox-22,oy,44,12);
+ const nm=['O','J1','J2','E'];R.P.forEach((p,i)=>{g.fillStyle=i==3?'#ff5d6c':'#38d0ff';g.beginPath();g.arc(X(p[0]),Y(p[1]),i==3?7:8,0,7);g.fill();g.fillStyle=getComputedStyle(document.body).color;g.font='12px sans-serif';g.fillText(`${nm[i]} (${f(p[0],0)}, ${f(p[1],0)})`,X(p[0])+10,Y(p[1])-8)})}
+$('#cv2').onclick=e=>{const{cv,sc,ox,oy}=fit2(),b=cv.getBoundingClientRect(),k=cv.width/b.width;
+ const x=((e.clientX-b.left)*k-ox)/sc,y=(oy-(e.clientY-b.top)*k)/sc;target=[x,y];$('#tx').value=f(x,1);$('#ty').value=f(y,1);$('#tz').value=0;
+ $('#tphi').value=f(S.A[0]+S.A[1]+S.A[2],1);solveIK()};
+
+/* ---------- 3D (own projection, no libraries) ---------- */
+function proj(p){const[x,y,z]=p,cy=Math.cos(cam.yaw),sy=Math.sin(cam.yaw),cp=Math.cos(cam.pit),sp=Math.sin(cam.pit);
+ let x1=x*cy-z*sy,z1=x*sy+z*cy,y1=y*cp-z1*sp,z2=y*sp+z1*cp;const cv=$('#cv3'),s=cam.z*1.1,d=900/(900+z2);
+ return[cv.width/2+cam.px+x1*s*d,cv.height*.62+cam.py-y1*s*d]}
+function draw3(){if(validate().length||$('#view3d').classList.contains('hide'))return;const cv=$('#cv3'),g=cv.getContext('2d'),R=fk(S.L,S.A);g.clearRect(0,0,cv.width,cv.height);
+ const L=(a,b,c,w=1)=>{const p=proj(a),q=proj(b);g.strokeStyle=c;g.lineWidth=w;g.beginPath();g.moveTo(...p);g.lineTo(...q);g.stroke()};
+ for(let v=-300;v<=300;v+=50){L([v,0,-300],[v,0,300],'rgba(56,208,255,.15)');L([-300,0,v],[300,0,v],'rgba(56,208,255,.15)')}
+ L([0,0,0],[320,0,0],'#ff5d6c',2);L([0,0,0],[0,320,0],'#3ddc97',2);L([0,0,0],[0,0,320],'#5b8cff',2);
+ g.font='12px sans-serif';[['X',[335,0,0]],['Y (up)',[0,335,0]],['Z',[0,0,335]]].forEach(a=>{g.fillStyle='#8ba3bb';g.fillText(a[0],...proj(a[1]))});
+ const P=R.P.map(p=>[p[0],p[1],0]);
+ if(target){const t=proj([target[0],target[1],0]);g.strokeStyle='#ffb347';g.lineWidth=2;g.beginPath();g.arc(...t,9,0,7);g.stroke()}
+ const cols=['#9fb8cf','#7aa7c7','#5b8db0'];for(let i=0;i<3;i++)L(P[i],P[i+1],cols[i],10);
+ P.forEach((p,i)=>{const q=proj(p);g.fillStyle=i==3?'#ff5d6c':'#38d0ff';g.beginPath();g.arc(...q,i==3?7:8,0,7);g.fill()});}
+let drag=null;const c3=$('#cv3');
+c3.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,s:e.shiftKey};c3.setPointerCapture(e.pointerId)};
+c3.onpointerup=()=>drag=null;
+c3.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;
+ if(drag.s){cam.px+=dx;cam.py+=dy}else{cam.yaw+=dx*.01;cam.pit=Math.max(-1.4,Math.min(1.4,cam.pit+dy*.01))}draw3()};
+c3.onwheel=e=>{e.preventDefault();cam.z=Math.max(.3,Math.min(3,cam.z*(e.deltaY<0?1.1:.9)));draw3()};
+
+/* ---------- animation & IK ---------- */
+function animateTo(A2){cancelAnimationFrame(anim);const A0=[...S.A],t0=performance.now(),dur=1200/(+$('#spd').value);
+ const tick=t=>{if(!playing){t0x+=16;anim=requestAnimationFrame(tick);return}let k=Math.min(1,(t-t0x)/dur);const e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;
+  S.A=A0.map((a,i)=>a+(A2[i]-a)*e);sync();update();if(k<1)anim=requestAnimationFrame(tick)};let t0x=t0;anim=requestAnimationFrame(tick)}
+function solveIK(){if(!target)return;const phi=parseFloat($('#tphi').value),W=reach(S.L),r=Math.hypot(target[0],target[1]);
+ const z=parseFloat($('#tz').value)||0;let out='';
+ if(isNaN(phi)){$('#ikres').innerHTML='<p class="warn">⚠ Enter a valid tilt angle.</p>';return}
+ const res=ik(S.L,target[0],target[1],phi);
+ if(r>W.max||r<W.min||!res.ok){out=`<p class="warn">🔴 Target Unreachable — ⚠ Target position is outside the robot's workspace.</p><p>${res.ok?`Distance ${f(r)} mm is outside [${f(W.min)}, ${f(W.max)}] mm.`:res.why}</p>`;status();draw2();$('#ikres').innerHTML=out;return}
+ const bad=res.A.findIndex((a,i)=>{let n=((a+180)%360+360)%360-180;res.A[i]=n;return n<LIM[i][0]||n>LIM[i][1]});
+ if(bad>=0){$('#ikres').innerHTML=`<p class="warn">🔴 ⚠ Joint ${bad+1} would need ${f(res.A[bad])}°, outside its limit [${LIM[bad]}]°.</p>`;return}
+ out=`<p class="ok">🟢 Target Reachable</p><div class="eq">Wrist point = target − L₃(cosφ, sinφ) = (${f(res.wx)}, ${f(res.wy)})</div><div class="eq">cos θ₂ = (x² + y² − L₁² − L₂²)/(2L₁L₂) = ${f(res.c,4)}</div><div class="eq">θ₂ = acos(...) = ${f(res.A[1])}°</div><div class="eq">θ₁ = atan2(y, x) − atan2(L₂sinθ₂, L₁ + L₂cosθ₂) = ${f(res.A[0])}°</div><div class="eq">θ₃ = φ − θ₁ − θ₂ = ${f(res.A[2])}°</div>${z!==0?`<p class="warn">Note: Z = ${f(z)} ignored (planar arm, Z = 0).</p>`:''}<span class="why open">acos is clamped to [−1,1] to avoid rounding errors; this is the “elbow-down” solution.</span>`;
+ $('#ikres').innerHTML=out;animateTo(res.A)}
+
+/* ---------- wiring ---------- */
+function enter(){$('#login').classList.add('hide');$('#app').classList.remove('hide');buildParams();update()}
+$('#loginBtn').onclick=()=>{if($('#em').value==='student@robotics.com'&&$('#pw').value==='robot123'){if($('#rem').checked)localStorage.setItem('rapc_in','1');enter()}else $('#lerr').textContent='⚠ Wrong email or password. Use student@robotics.com / robot123.'};
+$('#demoBtn').onclick=enter;$('#outBtn').onclick=()=>{localStorage.removeItem('rapc_in');location.reload()};
+$$('nav button').forEach(b=>b.onclick=()=>{$$('nav button').forEach(x=>x.classList.remove('on'));b.classList.add('on');const s=b.dataset.s;
+ $$('.sec').forEach(x=>{if(x.id)x.classList.remove('on')});$('#s-'+s)?.classList.add('on');
+ const is3=s==='sim';$('#view2d').classList.toggle('hide',is3);$('#view3d').classList.toggle('hide',!is3);$('#wsCard').classList.toggle('hide',s==='about');update()});
+$('#stu').onchange=e=>{document.body.classList.toggle('student',e.target.checked);$$('.why').forEach(w=>w.classList.add('open'))};
+$('#eng').onchange=e=>document.body.classList.toggle('engm',e.target.checked);
+$('#prec').onchange=e=>{prec=+e.target.value;update()};
+$('#themeBtn').onclick=()=>{document.body.classList.toggle('light');update()};
+$('#resetBtn').onclick=()=>{cancelAnimationFrame(anim);S={L:[...DEF.L],A:[...DEF.A]};target=null;cam={yaw:.7,pit:.45,z:1,px:0,py:0};mstep=0;$('#ikres').innerHTML='';buildParams();update()};
+$('#saveBtn').onclick=()=>{if(validate().length)return;const R=fk(S.L,S.A),H=JSON.parse(localStorage.getItem('rapc_h')||'[]');H.push({L:S.L.map(v=>+v),A:S.A.map(v=>+(+v).toFixed(2)),e:[f(R.P[3][0]),f(R.P[3][1]),'0.00'],t:new Date().toLocaleString()});localStorage.setItem('rapc_h',JSON.stringify(H));hist()};
+$('#clrH').onclick=()=>{localStorage.removeItem('rapc_h');hist()};
+$('#csvBtn').onclick=()=>{const R=fk(S.L,S.A);const rows=[['Date','L1','L2','L3','th1','th2','th3','X','Y','Z'],[new Date().toLocaleString(),...S.L,...S.A,R.P[3][0],R.P[3][1],0]];
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}));a.download='robot_arm_results.csv';a.click()};
+$('#prBtn').onclick=$('#pdfBtn').onclick=()=>{$$('.sec').forEach(x=>x.classList.add('on'));$('#view2d').classList.remove('hide');$('#view3d').classList.add('hide');update();window.print();setTimeout(()=>$(`nav button.on`).click(),300)};
+$('#ikBtn').onclick=()=>{const x=parseFloat($('#tx').value),y=parseFloat($('#ty').value);if(isNaN(x)||isNaN(y)){$('#ikres').innerHTML='<p class="warn">⚠ Enter numeric target values.</p>';return}target=[x,y];solveIK()};
+$('#clrT').onclick=()=>{target=null;$('#ikres').innerHTML='';update()};
+$('#mstep').onclick=()=>{mstep=Math.min(2,mstep+1);update()};$('#mrst').onclick=()=>{mstep=0;update()};
+$('#bStart').onclick=()=>{playing=true;if(target)solveIK()};$('#bPause').onclick=()=>playing=false;
+$('#bReset3').onclick=()=>{cam={yaw:.7,pit:.45,z:1,px:0,py:0};$('#resetBtn').click()};
+$('#bGo').onclick=()=>{if(!target){$('#errs').textContent='⚠ Click the 2D plane or use Inverse Kinematics to choose a target first.';return}playing=true;solveIK()};
+$('#spd').oninput=e=>$('#spdv').textContent=e.target.value+'x';
+$('#presBtn').onclick=()=>$('#present').classList.remove('hide');$('#pClose').onclick=()=>{$('#present').classList.add('hide');if(document.fullscreenElement)document.exitFullscreen()};
+$('#fsBtn').onclick=()=>document.documentElement.requestFullscreen?.();
+$$('.why').forEach(w=>w.classList.add('open'));
+/* login illustration */
+(()=>{const g=$('#loginCv').getContext('2d');g.fillStyle='#0b1b2c';g.fillRect(0,0,400,300);g.fillStyle='#223c55';g.fillRect(150,250,100,18);
+ const P=[[200,250],[260,170],[320,130],[350,70]];g.lineCap='round';g.lineWidth=16;g.strokeStyle='#7aa7c7';g.beginPath();P.forEach((p,i)=>i?g.lineTo(...p):g.moveTo(...p));g.stroke();
+ P.forEach((p,i)=>{g.fillStyle=i==3?'#ff5d6c':'#38d0ff';g.beginPath();g.arc(...p,i==3?8:10,0,7);g.fill()})})();
+if(localStorage.getItem('rapc_in'))enter();
+window.onresize=()=>{draw2();draw3()};
+</script>
+</body>
+</html>
